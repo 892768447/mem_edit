@@ -205,6 +205,8 @@ class Process(AbstractProcess):
                     return pid
             except ValueError:
                 pass
+            except MemEditError as err:
+                logger.info(repr(err))
 
         logger.info('Found no process with name {}'.format(target_name))
         return None
