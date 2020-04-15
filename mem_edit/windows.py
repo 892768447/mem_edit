@@ -67,19 +67,51 @@ mem_types = {
         'MEM_PRIVATE': 0x20000,
         }
 
-
 # C struct for VirtualQueryEx
-class MEMORY_BASIC_INFORMATION(ctypes.Structure):
+class MEMORY_BASIC_INFORMATION32(ctypes.Structure):
     _fields_ = [
-            ('BaseAddress', ctypes.c_void_p),
-            ('AllocationBase', ctypes.c_void_p),
+            ('BaseAddress', ctypes.wintypes.DWORD),
+            ('AllocationBase', ctypes.wintypes.DWORD),
             ('AllocationProtect', ctypes.wintypes.DWORD),
-            ('RegionSize', ctypes.wintypes.UINT),
+            ('RegionSize', ctypes.wintypes.DWORD),
             ('State', ctypes.wintypes.DWORD),
             ('Protect', ctypes.wintypes.DWORD),
             ('Type', ctypes.wintypes.DWORD),
             ]
 
+class MEMORY_BASIC_INFORMATION64(ctypes.Structure):
+    _fields_ = [
+            ('BaseAddress', ctypes.c_ulonglong),
+            ('AllocationBase', ctypes.c_ulonglong),
+            ('AllocationProtect', ctypes.wintypes.DWORD),
+			('__alignment1', ctypes.wintypes.DWORD),
+            ('RegionSize', ctypes.c_ulonglong),
+            ('State', ctypes.wintypes.DWORD),
+            ('Protect', ctypes.wintypes.DWORD),
+            ('Type', ctypes.wintypes.DWORD),
+			('__alignment2', ctypes.wintypes.DWORD),
+            ]
+
+PTR_SIZE = ctypes.sizeof(ctypes.c_void_p)
+if PTR_SIZE == 8:       # 64-bit python
+    MEMORY_BASIC_INFORMATION = MEMORY_BASIC_INFORMATION64
+elif PTR_SIZE == 4:     # 32-bit python
+    MEMORY_BASIC_INFORMATION = MEMORY_BASIC_INFORMATION32
+
+ctypes.windll.kernel32.VirtualQueryEx.argtypes = [ctypes.wintypes.HANDLE,
+												  ctypes.wintypes.LPCVOID,
+												  ctypes.c_void_p,
+												  ctypes.c_size_t]
+ctypes.windll.kernel32.ReadProcessMemory.argtypes = [ctypes.wintypes.HANDLE,
+                                                     ctypes.wintypes.LPCVOID,
+                                                     ctypes.c_void_p,
+                                                     ctypes.c_size_t,
+                                                     ctypes.c_void_p]
+ctypes.windll.kernel32.WriteProcessMemory.argtypes = [ctypes.wintypes.HANDLE,
+                                                      ctypes.wintypes.LPCVOID,
+                                                      ctypes.c_void_p,
+                                                      ctypes.c_size_t,
+                                                      ctypes.c_void_p]
 
 # C struct for GetSystemInfo
 class SYSTEM_INFO(ctypes.Structure):
@@ -89,7 +121,7 @@ class SYSTEM_INFO(ctypes.Structure):
             ('dwPageSize', ctypes.wintypes.DWORD),
             ('lpMinimumApplicationAddress', ctypes.c_void_p),
             ('lpMaximumApplicationAddress', ctypes.c_void_p),
-            ('dwActiveProcessorMask', ctypes.wintypes.DWORD),
+            ('dwActiveProcessorMask', ctypes.c_void_p),
             ('dwNumberOfProcessors', ctypes.wintypes.DWORD),
             ('dwProcessorType', ctypes.wintypes.DWORD),
             ('dwAllocationGranularity', ctypes.wintypes.DWORD),
