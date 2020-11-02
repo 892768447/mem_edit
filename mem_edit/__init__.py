@@ -12,16 +12,14 @@ To get started, try:
 
 """
 import platform
-import pathlib
 
 from .utils import MemEditError
 
 
 __author__ = 'Jan Petykiewicz'
 
-with open(pathlib.Path(__file__).parent / 'VERSION', 'r') as f:
-    __version__ = f.read().strip()
-version = __version__
+from .VERSION import __version__
+version = __version__       # legacy compatibility
 
 
 system = platform.system()

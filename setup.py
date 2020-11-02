@@ -5,8 +5,8 @@ from setuptools import setup, find_packages
 with open('README.md', 'r') as f:
     long_description = f.read()
 
-with open('mem_edit/VERSION', 'r') as f:
-    version = f.read().strip()
+with open('mem_edit/VERSION.py', 'rt') as f:
+    version = f.readlines()[2].strip()
 
 setup(name='mem_edit',
       version=version,
@@ -50,7 +50,7 @@ setup(name='mem_edit',
       ],
       packages=find_packages(),
       package_data={
-          'mem_edit': ['VERSION']
+          'mem_edit': []
       },
       install_requires=[
             'typing',
