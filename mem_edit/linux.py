@@ -2,7 +2,7 @@
 Implementation of Process class for Linux
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from os import strerror
 import os
 import os.path
@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 
 
 ptrace_commands = {
-        'PTRACE_GETREGS': 12,
-        'PTRACE_SETREGS': 13,
-        'PTRACE_ATTACH': 16,
-        'PTRACE_DETACH': 17,
-        'PTRACE_SYSCALL': 24,
-        'PTRACE_SEIZE': 16902,
-        }
+    'PTRACE_GETREGS': 12,
+    'PTRACE_SETREGS': 13,
+    'PTRACE_ATTACH': 16,
+    'PTRACE_DETACH': 17,
+    'PTRACE_SYSCALL': 24,
+    'PTRACE_SEIZE': 16902,
+    }
 
 
 # import ptrace() from libc
@@ -91,7 +91,7 @@ class Process(AbstractProcess):
         return pids
 
     @staticmethod
-    def get_pid_by_name(target_name: str) -> int or None:
+    def get_pid_by_name(target_name: str) -> Optional[int]:
         for pid in Process.list_available_pids():
             try:
                 logger.info('Checking name for pid {}'.format(pid))

@@ -12,24 +12,29 @@ Utility functions and types:
     ctypes_equal(a, b)
 """
 
-from typing import List
+from typing import List, Union
 import ctypes
 
 
-ctypes_buffer_t = ctypes._SimpleCData or ctypes.Array or ctypes.Structure or ctypes.Union
+ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 
 class MemEditError(Exception):
     pass
 
 
-def search_buffer_verbatim(needle_buffer: ctypes_buffer_t, haystack_buffer: ctypes_buffer_t) -> List[int]:
+def search_buffer_verbatim(needle_buffer: ctypes_buffer_t,
+                           haystack_buffer: ctypes_buffer_t,
+                           ) -> List[int]:
     """
     Search for a buffer inside another buffer, using a direct (bitwise) comparison
 
-    :param needle_buffer: Buffer to search for.
-    :param haystack_buffer: Buffer to search in.
-    :return: List of offsets where the needle_buffer was found.
+    Args:
+        needle_buffer: Buffer to search for.
+        haystack_buffer: Buffer to search in.
+
+    Returns:
+        List of offsets where the `needle_buffer` was found.
     """
     found = []
 
@@ -45,14 +50,19 @@ def search_buffer_verbatim(needle_buffer: ctypes_buffer_t, haystack_buffer: ctyp
     return found
 
 
-def search_buffer(needle_buffer: ctypes_buffer_t, haystack_buffer: ctypes_buffer_t) -> List[int]:
+def search_buffer(needle_buffer: ctypes_buffer_t,
+                  haystack_buffer: ctypes_buffer_t,
+                  ) -> List[int]:
     """
-    Search for a buffer inside another buffer, using ctypes_equal for comparison.
-    Much slower than search_buffer_verbatim.
+    Search for a buffer inside another buffer, using `ctypes_equal` for comparison.
+    Much slower than `search_buffer_verbatim`.
 
-    :param needle_buffer: Buffer to search for.
-    :param haystack_buffer: Buffer to search in.
-    :return: List of offsets where the needle_buffer was found.
+    Args:
+        needle_buffer: Buffer to search for.
+        haystack_buffer: Buffer to search in.
+
+    Returns:
+        List of offsets where the needle_buffer was found.
     """
     found = []
     read_type = type(needle_buffer)
@@ -63,7 +73,9 @@ def search_buffer(needle_buffer: ctypes_buffer_t, haystack_buffer: ctypes_buffer
     return found
 
 
-def ctypes_equal(a: ctypes_buffer_t, b: ctypes_buffer_t) -> bool:
+def ctypes_equal(a: ctypes_buffer_t,
+                 b: ctypes_buffer_t,
+                 ) -> bool:
     """
     Check if the values stored inside two ctypes buffers are equal.
     """

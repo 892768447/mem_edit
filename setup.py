@@ -2,7 +2,8 @@
 
 from setuptools import setup, find_packages
 
-with open('README.md', 'r') as f:
+
+with open('README.md', 'rt') as f:
     long_description = f.read()
 
 with open('mem_edit/VERSION.py', 'rt') as f:
