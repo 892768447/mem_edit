@@ -13,7 +13,6 @@ from . import utils
 from .utils import ctypes_buffer_t
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

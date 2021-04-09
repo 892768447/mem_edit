@@ -14,7 +14,6 @@ from .abstract import Process as AbstractProcess
 from .utils import ctypes_buffer_t, MemEditError
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -229,18 +228,18 @@ class Process(AbstractProcess):
     def get_pid_by_name(target_name: str) -> Optional[int]:
         for pid in Process.list_available_pids():
             try:
-                logger.info('Checking name for pid {}'.format(pid))
+                logger.debug('Checking name for pid {}'.format(pid))
                 with Process.open_process(pid) as process:
                     path = process.get_path()
 
                 name = os.path.basename(path)
-                logger.info('Name was "{}"'.format(name))
+                logger.debug('Name was "{}"'.format(name))
                 if path is not None and name == target_name:
                     return pid
             except ValueError:
                 pass
             except MemEditError as err:
-                logger.info(repr(err))
+                logger.debug(repr(err))
 
         logger.info('Found no process with name {}'.format(target_name))
         return None
