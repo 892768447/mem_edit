@@ -15,7 +15,7 @@ setup(name='mem_edit',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='Jan Petykiewicz',
-      author_email='anewusername@gmail.com',
+      author_email='jan@mpxd.net',
       url='https://mpxd.net/code/jan/mem_edit',
       keywords=[
             'memory',
