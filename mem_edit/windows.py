@@ -1,21 +1,21 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Implementation of Process class for Windows
 """
 
-from typing import List, Tuple, Optional
-from math import floor
-from os import strerror
-import os.path
 import ctypes
 import ctypes.wintypes
 import logging
+import os.path
+from math import floor
+from os import strerror
+from typing import List, Optional, Tuple
 
 from .abstract import Process as AbstractProcess
-from .utils import ctypes_buffer_t, MemEditError
-
+from .utils import MemEditError, ctypes_buffer_t
 
 logger = logging.getLogger(__name__)
-
 
 # Process handle privileges
 privileges = {
@@ -23,20 +23,18 @@ privileges = {
     'PROCESS_VM_OPERATION': 0x0008,
     'PROCESS_VM_READ': 0x0010,
     'PROCESS_VM_WRITE': 0x0020,
-    }
-privileges['PROCESS_RW'] = (
-    privileges['PROCESS_QUERY_INFORMATION'] |
-    privileges['PROCESS_VM_OPERATION'] |
-    privileges['PROCESS_VM_READ'] |
-    privileges['PROCESS_VM_WRITE']
-    )
+}
+privileges['PROCESS_RW'] = (privileges['PROCESS_QUERY_INFORMATION'] |
+                            privileges['PROCESS_VM_OPERATION'] |
+                            privileges['PROCESS_VM_READ'] |
+                            privileges['PROCESS_VM_WRITE'])
 
 # Memory region states
 mem_states = {
     'MEM_COMMIT': 0x1000,
     'MEM_FREE': 0x10000,
     'MEM_RESERVE': 0x2000,
-    }
+}
 
 # Memory region permissions
 page_protections = {
@@ -47,24 +45,22 @@ page_protections = {
     'PAGE_NOACCESS': 0x01,
     'PAGE_READWRITE': 0x04,
     'PAGE_WRITECOPY': 0x08,
-    }
+}
 # Custom (combined) permissions
-page_protections['PAGE_READABLE'] = (
-    page_protections['PAGE_EXECUTE_READ'] |
-    page_protections['PAGE_EXECUTE_READWRITE'] |
-    page_protections['PAGE_READWRITE']
-    )
+page_protections['PAGE_READABLE'] = (page_protections['PAGE_EXECUTE_READ'] |
+                                     page_protections['PAGE_EXECUTE_READWRITE']
+                                     | page_protections['PAGE_READWRITE'])
 page_protections['PAGE_READWRITEABLE'] = (
     page_protections['PAGE_EXECUTE_READWRITE'] |
-    page_protections['PAGE_READWRITE']
-    )
+    page_protections['PAGE_READWRITE'])
 
 # Memory types
 mem_types = {
     'MEM_IMAGE': 0x1000000,
     'MEM_MAPPED': 0x40000,
     'MEM_PRIVATE': 0x20000,
-    }
+}
+
 
 # C struct for VirtualQueryEx
 class MEMORY_BASIC_INFORMATION32(ctypes.Structure):
@@ -76,7 +72,8 @@ class MEMORY_BASIC_INFORMATION32(ctypes.Structure):
         ('State', ctypes.wintypes.DWORD),
         ('Protect', ctypes.wintypes.DWORD),
         ('Type', ctypes.wintypes.DWORD),
-        ]
+    ]
+
 
 class MEMORY_BASIC_INFORMATION64(ctypes.Structure):
     _fields_ = [
@@ -89,31 +86,28 @@ class MEMORY_BASIC_INFORMATION64(ctypes.Structure):
         ('Protect', ctypes.wintypes.DWORD),
         ('Type', ctypes.wintypes.DWORD),
         ('__alignment2', ctypes.wintypes.DWORD),
-        ]
+    ]
+
 
 PTR_SIZE = ctypes.sizeof(ctypes.c_void_p)
-if PTR_SIZE == 8:       # 64-bit python
+if PTR_SIZE == 8:  # 64-bit python
     MEMORY_BASIC_INFORMATION = MEMORY_BASIC_INFORMATION64
-elif PTR_SIZE == 4:     # 32-bit python
+elif PTR_SIZE == 4:  # 32-bit python
     MEMORY_BASIC_INFORMATION = MEMORY_BASIC_INFORMATION32
 
 ctypes.windll.kernel32.VirtualQueryEx.argtypes = [
-    ctypes.wintypes.HANDLE,
-    ctypes.wintypes.LPCVOID,
-    ctypes.c_void_p,
-    ctypes.c_size_t]
+    ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.c_void_p,
+    ctypes.c_size_t
+]
 ctypes.windll.kernel32.ReadProcessMemory.argtypes = [
-    ctypes.wintypes.HANDLE,
-    ctypes.wintypes.LPCVOID,
-    ctypes.c_void_p,
-    ctypes.c_size_t,
-    ctypes.c_void_p]
+    ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.c_void_p,
+    ctypes.c_size_t, ctypes.c_void_p
+]
 ctypes.windll.kernel32.WriteProcessMemory.argtypes = [
-    ctypes.wintypes.HANDLE,
-    ctypes.wintypes.LPCVOID,
-    ctypes.c_void_p,
-    ctypes.c_size_t,
-    ctypes.c_void_p]
+    ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.c_void_p,
+    ctypes.c_size_t, ctypes.c_void_p
+]
+
 
 # C struct for GetSystemInfo
 class SYSTEM_INFO(ctypes.Structure):
@@ -129,7 +123,7 @@ class SYSTEM_INFO(ctypes.Structure):
         ('dwAllocationGranularity', ctypes.wintypes.DWORD),
         ('wProcessorLevel', ctypes.wintypes.WORD),
         ('wProcessorRevision', ctypes.wintypes.WORD),
-        ]
+    ]
 
 
 class Process(AbstractProcess):
@@ -137,10 +131,7 @@ class Process(AbstractProcess):
 
     def __init__(self, process_id: int):
         process_handle = ctypes.windll.kernel32.OpenProcess(
-            privileges['PROCESS_RW'],
-            False,
-            process_id
-            )
+            privileges['PROCESS_RW'], False, process_id)
 
         if not process_handle:
             raise MemEditError('Couldn\'t open process {}'.format(process_id))
@@ -154,26 +145,23 @@ class Process(AbstractProcess):
     def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
         try:
             ctypes.windll.kernel32.WriteProcessMemory(
-                self.process_handle,
-                base_address,
-                ctypes.byref(write_buffer),
-                ctypes.sizeof(write_buffer),
-                None
-                )
+                self.process_handle, base_address, ctypes.byref(write_buffer),
+                ctypes.sizeof(write_buffer), None)
         except (BufferError, ValueError, TypeError):
-            raise MemEditError('Error with handle {}:  {}'.format(self.process_handle, self._get_last_error()))
+            raise MemEditError('Error with handle {}:  {}'.format(
+                self.process_handle, self._get_last_error()))
 
-    def read_memory(self, base_address: int, read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
+    def read_memory(self, base_address: int,
+                    read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
         try:
-            ctypes.windll.kernel32.ReadProcessMemory(
-                self.process_handle,
-                base_address,
-                ctypes.byref(read_buffer),
-                ctypes.sizeof(read_buffer),
-                None
-                )
+            ctypes.windll.kernel32.ReadProcessMemory(self.process_handle,
+                                                     base_address,
+                                                     ctypes.byref(read_buffer),
+                                                     ctypes.sizeof(read_buffer),
+                                                     None)
         except (BufferError, ValueError, TypeError):
-            raise MemEditError('Error with handle {}: {}'.format(self.process_handle, self._get_last_error()))
+            raise MemEditError('Error with handle {}: {}'.format(
+                self.process_handle, self._get_last_error()))
 
         return read_buffer
 
@@ -186,9 +174,7 @@ class Process(AbstractProcess):
         max_path_len = 260
         name_buffer = (ctypes.c_char * max_path_len)()
         rval = ctypes.windll.psapi.GetProcessImageFileNameA(
-             self.process_handle,
-             name_buffer,
-             max_path_len)
+            self.process_handle, name_buffer, max_path_len)
 
         if rval > 0:
             return name_buffer.value.decode()
@@ -210,11 +196,14 @@ class Process(AbstractProcess):
             size = ctypes.sizeof(pids)
             pids_ptr = ctypes.byref(pids)
 
-            success = ctypes.windll.Psapi.EnumProcesses(pids_ptr, size, returned_size_ptr)
+            success = ctypes.windll.Psapi.EnumProcesses(pids_ptr, size,
+                                                        returned_size_ptr)
             if not success:
-                raise MemEditError('Failed to enumerate processes: n={}'.format(n))
+                raise MemEditError(
+                    'Failed to enumerate processes: n={}'.format(n))
 
-            num_returned = floor(returned_size.value / ctypes.sizeof(ctypes.wintypes.DWORD))
+            num_returned = floor(returned_size.value /
+                                 ctypes.sizeof(ctypes.wintypes.DWORD))
 
             if n == num_returned:
                 n *= 2
@@ -232,9 +221,9 @@ class Process(AbstractProcess):
                 with Process.open_process(pid) as process:
                     path = process.get_path()
 
-                name = os.path.basename(path)
+                name = os.path.basename(path).lower()
                 logger.debug('Name was "{}"'.format(name))
-                if path is not None and name == target_name:
+                if path is not None and name == target_name.lower():
                     return pid
             except ValueError:
                 pass
@@ -244,7 +233,31 @@ class Process(AbstractProcess):
         logger.info('Found no process with name {}'.format(target_name))
         return None
 
-    def list_mapped_regions(self, writeable_only: bool = True) -> List[Tuple[int, int]]:
+    @staticmethod
+    def get_pids_by_name(target_name: str) -> Optional[list]:
+        pids = []
+        for pid in Process.list_available_pids():
+            try:
+                logger.debug('Checking name for pid {}'.format(pid))
+                with Process.open_process(pid) as process:
+                    path = process.get_path()
+
+                name = os.path.basename(path).lower()
+                logger.debug('Name was "{}"'.format(name))
+                if path is not None and name == target_name.lower():
+                    pids.append(pid)
+            except ValueError:
+                pass
+            except MemEditError as err:
+                logger.debug(repr(err))
+
+        if not pids:
+            logger.info('Found no process with name {}'.format(target_name))
+        return pids
+
+    def list_mapped_regions(self,
+                            writeable_only: bool = True
+                           ) -> List[Tuple[int, int]]:
         sys_info = SYSTEM_INFO()
         sys_info_ptr = ctypes.byref(sys_info)
         ctypes.windll.kernel32.GetSystemInfo(sys_info_ptr)
@@ -261,15 +274,13 @@ class Process(AbstractProcess):
             mbi_size = ctypes.sizeof(mbi)
 
             success = ctypes.windll.kernel32.VirtualQueryEx(
-                self.process_handle,
-                address,
-                mbi_ptr,
-                mbi_size)
+                self.process_handle, address, mbi_ptr, mbi_size)
 
             if success != mbi_size:
                 if success == 0:
                     raise MemEditError('Failed VirtualQueryEx with handle ' +
-                                       '{}: {}'.format(self.process_handle, self._get_last_error()))
+                                       '{}: {}'.format(self.process_handle,
+                                                       self._get_last_error()))
                 else:
                     raise MemEditError('VirtualQueryEx output too short!')
 
@@ -279,11 +290,12 @@ class Process(AbstractProcess):
         page_ptr = start
         while page_ptr < stop:
             page_info = get_mem_info(page_ptr)
-            if (page_info.Type == mem_types['MEM_PRIVATE']
-                    and page_info.State == mem_states['MEM_COMMIT']
-                    and page_info.Protect & page_protections['PAGE_READABLE'] != 0
-                    and (page_info.Protect & page_protections['PAGE_READWRITEABLE'] != 0
-                         or not writeable_only)):
+            if (page_info.Type == mem_types['MEM_PRIVATE'] and
+                    page_info.State == mem_states['MEM_COMMIT'] and
+                    page_info.Protect & page_protections['PAGE_READABLE'] != 0
+                    and
+                (page_info.Protect & page_protections['PAGE_READWRITEABLE'] != 0
+                 or not writeable_only)):
                 regions.append((page_ptr, page_ptr + page_info.RegionSize))
             page_ptr += page_info.RegionSize
 

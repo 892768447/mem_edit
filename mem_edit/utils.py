@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Utility functions and types:
 
@@ -12,20 +14,21 @@ Utility functions and types:
     ctypes_equal(a, b)
 """
 
-from typing import List, Union
 import ctypes
+from typing import List, Union
 
-
-ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
+ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure,
+                        ctypes.Union]
 
 
 class MemEditError(Exception):
     pass
 
 
-def search_buffer_verbatim(needle_buffer: ctypes_buffer_t,
-                           haystack_buffer: ctypes_buffer_t,
-                           ) -> List[int]:
+def search_buffer_verbatim(
+    needle_buffer: ctypes_buffer_t,
+    haystack_buffer: ctypes_buffer_t,
+) -> List[int]:
     """
     Search for a buffer inside another buffer, using a direct (bitwise) comparison
 
@@ -50,9 +53,10 @@ def search_buffer_verbatim(needle_buffer: ctypes_buffer_t,
     return found
 
 
-def search_buffer(needle_buffer: ctypes_buffer_t,
-                  haystack_buffer: ctypes_buffer_t,
-                  ) -> List[int]:
+def search_buffer(
+    needle_buffer: ctypes_buffer_t,
+    haystack_buffer: ctypes_buffer_t,
+) -> List[int]:
     """
     Search for a buffer inside another buffer, using `ctypes_equal` for comparison.
     Much slower than `search_buffer_verbatim`.
@@ -73,9 +77,10 @@ def search_buffer(needle_buffer: ctypes_buffer_t,
     return found
 
 
-def ctypes_equal(a: ctypes_buffer_t,
-                 b: ctypes_buffer_t,
-                 ) -> bool:
+def ctypes_equal(
+    a: ctypes_buffer_t,
+    b: ctypes_buffer_t,
+) -> bool:
     """
     Check if the values stored inside two ctypes buffers are equal.
     """

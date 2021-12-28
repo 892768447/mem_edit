@@ -1,22 +1,22 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Implementation of Process class for Linux
 """
 
-from typing import List, Tuple, Optional
-from os import strerror
-import os
-import os.path
-import signal
 import ctypes
 import ctypes.util
 import logging
+import os
+import os.path
+import signal
+from os import strerror
+from typing import List, Optional, Tuple
 
 from .abstract import Process as AbstractProcess
-from .utils import ctypes_buffer_t, MemEditError
-
+from .utils import MemEditError, ctypes_buffer_t
 
 logger = logging.getLogger(__name__)
-
 
 ptrace_commands = {
     'PTRACE_GETREGS': 12,
@@ -25,8 +25,7 @@ ptrace_commands = {
     'PTRACE_DETACH': 17,
     'PTRACE_SYSCALL': 24,
     'PTRACE_SEIZE': 16902,
-    }
-
+}
 
 # import ptrace() from libc
 _libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
@@ -44,8 +43,9 @@ def ptrace(command: int, pid: int = 0, arg1: int = 0, arg2: int = 0) -> int:
     if result == -1:
         err_no = ctypes.get_errno()
         if err_no:
-            raise MemEditError('ptrace({}, {}, {}, {})'.format(command, pid, arg1, arg2) +
-                               ' failed with error {}: {}'.format(err_no, strerror(err_no)))
+            raise MemEditError(
+                'ptrace({}, {}, {}, {})'.format(command, pid, arg1, arg2) +
+                ' failed with error {}: {}'.format(err_no, strerror(err_no)))
     return result
 
 
@@ -66,7 +66,8 @@ class Process(AbstractProcess):
             mem.seek(base_address)
             mem.write(write_buffer)
 
-    def read_memory(self, base_address: int, read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
+    def read_memory(self, base_address: int,
+                    read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
         with open('/proc/{}/mem'.format(self.pid), 'rb+') as mem:
             mem.seek(base_address)
             mem.readinto(read_buffer)
@@ -99,15 +100,37 @@ class Process(AbstractProcess):
             except FileNotFoundError:
                 continue
 
-            name = os.path.basename(path)
+            name = os.path.basename(path).lower()
             logger.debug('Name was "{}"'.format(name))
-            if path is not None and name == target_name:
+            if path is not None and name == target_name.lower():
                 return pid
 
         logger.info('Found no process with name {}'.format(target_name))
         return None
 
-    def list_mapped_regions(self, writeable_only: bool = True) -> List[Tuple[int, int]]:
+    @staticmethod
+    def get_pids_by_name(target_name: str) -> Optional[list]:
+        pids = []
+        for pid in Process.list_available_pids():
+            try:
+                logger.debug('Checking name for pid {}'.format(pid))
+                with open('/proc/{}/cmdline'.format(pid), 'rb') as cmdline:
+                    path = cmdline.read().decode().split('\x00')[0]
+            except FileNotFoundError:
+                continue
+
+            name = os.path.basename(path).lower()
+            logger.debug('Name was "{}"'.format(name))
+            if path is not None and name == target_name.lower():
+                pids.append(pid)
+
+        if not pids:
+            logger.info('Found no process with name {}'.format(target_name))
+        return pids
+
+    def list_mapped_regions(self,
+                            writeable_only: bool = True
+                           ) -> List[Tuple[int, int]]:
         regions = []
         with open('/proc/{}/maps'.format(self.pid), 'r') as maps:
             for line in maps:

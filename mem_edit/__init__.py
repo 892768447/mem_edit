@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 mem_edit
 
@@ -15,12 +17,11 @@ import platform
 
 from .utils import MemEditError
 
-
 __author__ = 'Jan Petykiewicz'
 
 from .VERSION import __version__
-version = __version__       # legacy compatibility
 
+version = __version__  # legacy compatibility
 
 system = platform.system()
 if system == 'Windows':

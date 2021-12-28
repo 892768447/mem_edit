@@ -1,17 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Abstract class for cross-platform memory editing.
 """
 
-from typing import List, Tuple, Optional, Union, Generator
-from abc import ABCMeta, abstractmethod
-from contextlib import contextmanager
 import copy
 import ctypes
 import logging
+from abc import ABCMeta, abstractmethod
+from contextlib import contextmanager
+from typing import Generator, List, Optional, Tuple, Union
 
 from . import utils
 from .utils import ctypes_buffer_t
-
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +161,8 @@ class Process(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def read_memory(self, base_address: int, read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
+    def read_memory(self, base_address: int,
+                    read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
         """
         Read into the given buffer from the process's address space, starting at `base_address`.
 
@@ -234,10 +236,33 @@ class Process(metaclass=ABCMeta):
         """
         pass
 
-    def deref_struct_pointer(self,
-                             base_address: int,
-                             targets: List[Tuple[int, ctypes_buffer_t]],
-                             ) -> List[ctypes_buffer_t]:
+    @staticmethod
+    @abstractmethod
+    def get_pids_by_name(target_name: str) -> Optional[list]:
+        """
+        Attempt to return the process id (pid) list of a process which was run with an executable
+          file with the provided name. If no process is found, return [].
+
+        This is a convenience method for quickly finding a process which is already known
+          to be unique and has a well-defined executable name.
+
+        Don't rely on this method if you can possibly avoid it, since it makes no
+          attempt to confirm that it found a unique process and breaks trivially (e.g. if the
+          executable file is renamed).
+
+        Args:
+            target_name: Name of the process to find the PID for
+
+        Returns:
+            Process id (pid) list of a process with the provided name, or `[]`.
+        """
+        pass
+
+    def deref_struct_pointer(
+        self,
+        base_address: int,
+        targets: List[Tuple[int, ctypes_buffer_t]],
+    ) -> List[ctypes_buffer_t]:
         """
         Take a pointer to a struct and read out the struct members:
         ```
@@ -260,14 +285,18 @@ class Process(metaclass=ABCMeta):
             List of read values corresponding to the provided targets.
         """
         base = self.read_memory(base_address, ctypes.c_void_p()).value
-        values = [self.read_memory(base + offset, buffer) for offset, buffer in targets]
+        values = [
+            self.read_memory(base + offset, buffer)
+            for offset, buffer in targets
+        ]
         return values
 
-    def search_addresses(self,
-                         addresses: List[int],
-                         needle_buffer: ctypes_buffer_t,
-                         verbatim: bool = True,
-                         ) -> List[int]:
+    def search_addresses(
+        self,
+        addresses: List[int],
+        needle_buffer: ctypes_buffer_t,
+        verbatim: bool = True,
+    ) -> List[int]:
         """
         Search for the provided value at each of the provided addresses, and return the addresses
           where it is found.
@@ -287,6 +316,7 @@ class Process(metaclass=ABCMeta):
         read_buffer = copy.copy(needle_buffer)
 
         if verbatim:
+
             def compare(a, b):
                 return bytes(read_buffer) == bytes(needle_buffer)
         else:
@@ -298,11 +328,12 @@ class Process(metaclass=ABCMeta):
                 found.append(address)
         return found
 
-    def search_all_memory(self,
-                          needle_buffer: ctypes_buffer_t,
-                          writeable_only: bool = True,
-                          verbatim: bool = True,
-                          ) -> List[int]:
+    def search_all_memory(
+        self,
+        needle_buffer: ctypes_buffer_t,
+        writeable_only: bool = True,
+        verbatim: bool = True,
+    ) -> List[int]:
         """
         Search the entire memory space accessible to the process for the provided value.
 
@@ -328,10 +359,47 @@ class Process(metaclass=ABCMeta):
             try:
                 region_buffer = (ctypes.c_byte * (stop - start))()
                 self.read_memory(start, region_buffer)
-                found += [offset + start for offset in search(needle_buffer, region_buffer)]
+                found += [
+                    offset + start
+                    for offset in search(needle_buffer, region_buffer)
+                ]
             except OSError:
-                logger.error('Failed to read in range  0x{} - 0x{}'.format(start, stop))
+                logger.error('Failed to read in range  0x{} - 0x{}'.format(
+                    start, stop))
         return found
+
+    def search_all_string(
+        self,
+        text: str,
+        result_len: int = 1024,
+        writeable_only: bool = True,
+        verbatim: bool = True,
+    ) -> List[bytes]:
+        """
+        Search all memory for strings.
+
+        Args:
+            text: The value to search for.
+            result_len: The memory value text length to get.
+            writeable_only: If `True`, only search regions where the process has write access.
+                Default `True`.
+            verbatim: If `True`, perform bitwise comparison when searching for `needle_buffer`.
+                If `False`, perform `utils.ctypes_equal-based` comparison. Default `True`.
+
+        Returns:
+            List of addresses where the `needle_buffer` was found.
+        """
+        assert text
+        search_buffer = ctypes.create_unicode_buffer(len(text))
+        search_buffer.value = text
+        result_buffer = ctypes.create_unicode_buffer(result_len)
+        result = []
+        for addr in self.search_all_memory(search_buffer, writeable_only,
+                                           verbatim):
+            self.read_memory(addr, result_buffer)
+            result.append(result_buffer.value.encode('utf-8'))
+
+        return result
 
     @classmethod
     @contextmanager
